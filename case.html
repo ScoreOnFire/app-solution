@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case study — App Solution Limited</title>
+<meta name="description" content="How we designed, built and published this Android app.">
+<meta name="theme-color" content="#050B1A">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<meta property="og:image" content="assets/img/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+.shots{display:flex;justify-content:center;align-items:flex-start;gap:30px;padding:30px 0 70px;perspective:1700px}
+.shot{width:220px;border-radius:34px;border:1px solid rgba(255,255,255,.16);background:#0A142C;padding:12px;box-shadow:0 40px 90px rgba(0,0,0,.6);overflow:hidden}
+.shot img{width:100%;border-radius:24px;display:block}
+.shot.s1{animation:bobA 8s ease-in-out infinite}.shot.s2{width:244px;animation:bobB 7s ease-in-out infinite}.shot.s3{animation:bobC 9s ease-in-out infinite}
+@keyframes bobA{0%,100%{transform:rotateY(22deg) rotateX(6deg) translateY(0)}50%{transform:rotateY(16deg) rotateX(3deg) translateY(-16px)}}
+@keyframes bobB{0%,100%{transform:rotateX(4deg) translateY(-8px)}50%{transform:rotateX(1deg) translateY(12px)}}
+@keyframes bobC{0%,100%{transform:rotateY(-22deg) rotateX(6deg) translateY(4px)}50%{transform:rotateY(-16deg) rotateX(3deg) translateY(-14px)}}
+.ph i{display:block;border-radius:12px;background:rgba(255,255,255,.07);margin-bottom:10px}
+@media (max-width:680px){.shots{gap:12px}.shot{width:30%;padding:6px;border-radius:20px}.shot.s2{width:36%}.shot img{border-radius:14px}}
+</style>
+</head>
+<body class="bg-soft">
+<main id="root">
+  <section class="wrap page-head"><div class="skeleton" style="height:60px;max-width:520px"></div><div class="skeleton" style="height:24px;max-width:680px;margin-top:20px"></div></section>
+</main>
+<script type="module" src="assets/js/main.js"></script>
+<script type="module">
+import { list, esc, qs, lines, csv } from "./assets/js/firebase.js";
+import { refresh } from "./assets/js/main.js";
+
+const items = await list("portfolio");
+const id = qs("id");
+const w = items.find((x) => x.id === id) || items[0];
+const root = document.getElementById("root");
+if (!w) { root.innerHTML = `<section class="wrap page-head"><h1 class="h2">Project not found</h1><a class="btn btn-ghost" style="margin-top:20px" href="portfolio.html">Back to portfolio</a></section>`; }
+else {
+  document.title = `${w.name} — App Solution Limited`;
+  const shots = lines(w.screens).filter((u) => /^https?:\/\//.test(u)).slice(0, 3);
+  const phones = shots.length
+    ? shots.map((u, i) => `<div class="shot s${i + 1}"><img src="${esc(u)}" alt="${esc(w.name)} screen ${i + 1}" loading="lazy"></div>`).join("")
+    : `<div class="shot s1 ph"><i style="height:96px;background:linear-gradient(140deg,#2E6BD1,#0B2A5B)"></i><span style="display:flex;gap:9px"><i style="flex:1;height:62px"></i><i style="flex:1;height:62px"></i></span><span style="display:flex;gap:9px"><i style="flex:1;height:62px"></i><i style="flex:1;height:62px"></i></span><i style="height:42px;background:#FF8A1F"></i></div>
+       <div class="shot s2 ph"><span style="display:flex;gap:10px;align-items:center;margin-bottom:12px"><i style="width:32px;height:32px;margin:0;background:#FF8A1F"></i><i style="flex:1;height:9px;margin:0"></i></span><i style="height:130px;background:linear-gradient(140deg,#16285A,#0B2A5B)"></i><i style="height:11px;width:86%"></i><i style="height:11px;width:64%"></i><i style="height:46px;background:#FF8A1F"></i></div>
+       <div class="shot s3 ph"><i style="height:16px;width:56%;background:rgba(255,255,255,.3)"></i><i style="height:52px"></i><i style="height:52px"></i><i style="height:52px;background:rgba(255,138,31,.2);border:1px solid rgba(255,138,31,.4)"></i><i style="height:52px"></i></div>`;
+  const stats = [1, 2, 3, 4].map((n) => [w["stat" + n + "Val"], w["stat" + n + "Lbl"]]).filter(([v]) => v);
+  const tech = csv(w.tech);
+  root.innerHTML = `
+  <section class="wrap page-head">
+    <a class="back" href="portfolio.html">&larr; All work</a>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+      <span class="tag">${esc(w.category || "App")}</span>
+      <span class="dim" style="font-size:14px">${[w.year, w.duration, "Android"].filter(Boolean).map(esc).join(" · ")}</span>
+    </div>
+    <h1 class="h1 reveal" style="margin-top:20px">${esc(w.name)}</h1>
+    <p class="lead reveal reveal-d1">${esc(w.desc || "")}</p>
+    ${w.playUrl ? `<a class="btn btn-ghost reveal reveal-d2" style="margin-top:26px" href="${esc(w.playUrl)}" target="_blank" rel="noopener">View on Google Play</a>` : ""}
+  </section>
+  <section class="wrap"><div class="shots" aria-hidden="${shots.length ? "false" : "true"}">${phones}</div></section>
+  ${stats.length ? `<section class="wrap section-sm"><div class="grid-4">${stats.map(([v, l], i) => `<div class="stat reveal reveal-d${i}" data-tilt><div class="num">${esc(v)}</div><div class="lbl">${esc(l || "")}</div></div>`).join("")}</div></section>` : ""}
+  <section class="wrap section-sm"><div class="grid-3">
+    <div class="card flat reveal" data-tilt><h3 style="margin-top:0">The challenge</h3><p>${esc(w.challenge || "Describe the client's problem in the admin panel.")}</p></div>
+    <div class="card flat reveal reveal-d1" data-tilt><h3 style="margin-top:0">What we built</h3><p>${esc(w.solution || "Describe the solution in the admin panel.")}</p></div>
+    <div class="card hl reveal reveal-d2" data-tilt><h3 style="margin-top:0">The result</h3><p>${esc(w.result || "Describe the outcome in the admin panel.")}</p></div>
+  </div></section>
+  <section class="wrap section">
+    <div class="cta-band reveal">
+      <div style="flex:999 1 420px">
+        ${w.quote ? `<p class="quote">“${esc(w.quote)}”</p><p class="dim" style="margin-top:16px"><b style="color:#fff">${esc(w.quoteName || "")}</b> ${w.quoteRole ? "· " + esc(w.quoteRole) : ""}</p>` : `<h2 class="h2">Want something like this?</h2><p class="lead" style="margin-top:12px">Tell us your idea and get a price in minutes.</p>`}
+      </div>
+      <div style="flex:1 1 280px">
+        ${tech.length ? `<div class="lbl-up" style="margin-bottom:14px">Built with</div><div class="pill-row">${tech.map((t) => `<span class="pill">${esc(t)}</span>`).join("")}</div>` : ""}
+        <a class="btn btn-primary btn-block" style="margin-top:24px" href="order.html">Build something like this</a>
+      </div>
+    </div>
+  </section>`;
+  refresh(root);
+}
+</script>
+</body>
+</html>

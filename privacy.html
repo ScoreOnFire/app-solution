@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy policy — App Solution Limited</title>
+<meta name="theme-color" content="#050B1A">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="bg-soft">
+<main>
+<section class="wrap page-head legal">
+  <span class="eyebrow">Legal</span>
+  <h1 class="h1" style="margin-top:22px">Privacy policy</h1>
+  <p class="lead">Last updated: <span id="upd">November 2026</span></p>
+
+  <h2>Who we are</h2>
+  <p>This website is run by App Solution Limited ("we", "us"), an Android app development studio publishing on Google Play. You can contact us at <a class="mail" href="#"></a>.</p>
+
+  <h2>What we collect</h2>
+  <ul>
+    <li><b>Order details</b> you enter: your name, email, WhatsApp number (optional), country, project description and chosen features.</li>
+    <li><b>Payment references</b>: the payment method you chose and the transaction hash or reference you paste in. We never see or store card numbers, wallet keys or bank logins.</li>
+    <li><b>Messages</b> you send through the contact form.</li>
+    <li><b>An anonymous ID</b>: when you place an order or send a message, your browser is given a random anonymous ID by Google Firebase so that only you can see and update your own order. It is not linked to your name unless you type your name into a form.</li>
+    <li><b>Usage statistics</b> through Google Analytics for Firebase (pages visited, device type, approximate country).</li>
+  </ul>
+
+  <h2>Why we use it</h2>
+  <ul>
+    <li>To quote, build and deliver the app you ordered and to contact you about it.</li>
+    <li>To check your payment against the blockchain or payment provider.</li>
+    <li>To improve the website.</li>
+  </ul>
+  <p>We do not sell your information and we do not use it for advertising.</p>
+
+  <h2>Where it is stored</h2>
+  <p>Data is stored in Google Cloud Firestore, operated by Google LLC, under Firebase's security rules so that customers can only read their own orders and only our staff can see all of them.</p>
+
+  <h2>How long we keep it</h2>
+  <p>We keep order records for as long as needed to support your app and meet accounting obligations, then delete them. You can ask us to delete your data at any time.</p>
+
+  <h2>Your rights</h2>
+  <p>You can ask to see, correct or delete the information we hold about you by emailing <a class="mail" href="#"></a>. We reply within 30 days.</p>
+
+  <h2>Apps we publish</h2>
+  <p>Each app we publish on Google Play has its own privacy policy describing what that app collects. This policy covers this website only.</p>
+
+  <h2>Changes</h2>
+  <p>If we change this policy we will update the date at the top of this page.</p>
+</section>
+</main>
+<script type="module" src="assets/js/main.js"></script>
+<script type="module">
+import { getSettings } from "./assets/js/firebase.js";
+const s = await getSettings();
+document.querySelectorAll(".mail").forEach((a) => { a.href = "mailto:" + s.email; a.textContent = s.email; });
+</script>
+</body>
+</html>

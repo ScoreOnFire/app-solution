@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pay advance — App Solution Limited</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#050B1A">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+</head>
+<body class="bg-soft">
+<main class="wrap" style="padding-bottom:80px" id="root">
+  <div class="page-head"><div class="skeleton" style="height:56px;max-width:520px"></div><div class="skeleton" style="height:300px;margin-top:30px"></div></div>
+</main>
+<script type="module" src="assets/js/main.js"></script>
+<script type="module">
+import { db, doc, getDoc, updateDoc, serverTimestamp, list, getSettings, money, esc, qs, ensureAnon, copyText, toast, STATUS } from "./assets/js/firebase.js";
+import { ICONS, refresh } from "./assets/js/main.js";
+
+async function main() {
+const root = document.getElementById("root");
+const id = qs("id");
+const bad = (h, t) => { root.innerHTML = `<section class="page-head"><h1 class="h2">${h}</h1><p class="lead" style="margin-top:14px">${t}</p><div class="hero-actions" style="margin-top:26px"><a class="btn btn-primary" href="track.html">Find my order</a><a class="btn btn-ghost" href="contact.html">Contact us</a></div></section>`; };
+if (!id) { bad("No order selected", "Open the payment link from your order, or find it on the tracking page."); return; }
+
+await ensureAnon().catch(() => {});
+let snap;
+try { snap = await getDoc(doc(db, "orders", id)); } catch (e) { console.error(e); }
+if (!snap || !snap.exists()) { bad("Order not found", "This payment link is not valid. Please check the link or contact us."); return; }
+const o = { id: snap.id, ...snap.data() };
+
+if (!["pending", "rejected"].includes(o.status)) {
+  root.innerHTML = `<section class="page-head" style="max-width:720px">
+    <div class="notice ${o.status === "submitted" ? "info" : "ok"}"><span>${ICONS.clock}</span><div><b style="color:#fff;display:block">${esc(STATUS[o.status]?.label || o.status)}</b>${o.status === "submitted" ? "We have your transaction reference and are checking it now. You will see the update on your tracking page." : "This order has already been paid."}</div></div>
+    <a class="btn btn-primary" style="margin-top:24px" href="track.html?id=${encodeURIComponent(o.id)}">Open tracking page</a></section>`;
+  return;
+}
+
+const [methods, s] = await Promise.all([list("paymentMethods", { fallback: false }), getSettings()]);
+if (!methods.length) {
+  bad("Payment methods are being set up", `Your order <b>${esc(o.code)}</b> is saved. Please contact us and we will send you payment details directly.`);
+  return;
+}
+
+root.innerHTML = `
+<section class="page-head" style="padding-bottom:30px">
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+    <a class="back" href="track.html?id=${encodeURIComponent(o.id)}" style="margin:0">Order ${esc(o.code)}</a>
+    <span class="timer" id="timer" style="margin-left:auto">${ICONS.clock}<span>30:00</span></span>
+  </div>
+  <h1 class="h2" style="margin-top:18px">Pay your advance</h1>
+  <p class="lead" style="margin-top:12px">${o.status === "rejected" ? "We could not find your last payment. Please check the details and submit again." : "Two quick steps: send the amount, then paste the transaction reference so we can verify it."}</p>
+  ${o.status === "rejected" && o.adminNote ? `<div class="notice bad" style="margin-top:18px">${ICONS.warn}<div>${esc(o.adminNote)}</div></div>` : ""}
+</section>
+
+<div class="layout-side">
+  <div style="display:flex;flex-direction:column;gap:26px">
+    <div>
+      <div class="lbl-up" style="margin-bottom:14px">1 · Choose how to pay</div>
+      <div class="grid-2" id="methods" style="gap:14px"></div>
+    </div>
+    <section class="pay-card" id="detail"></section>
+    <section class="pay-card" style="background:var(--panel)">
+      <div class="pay-head"><span class="num-badge off">2</span><h2 style="font-size:20px">Confirm your transfer</h2></div>
+      <p class="muted" id="refHelp" style="margin-bottom:20px;font-size:15px"></p>
+      <form id="txForm" novalidate>
+        <label class="lbl-up" for="txid" id="txLbl">Transaction hash</label>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px">
+          <input class="input mono" id="txid" maxlength="200" autocomplete="off" spellcheck="false" style="flex:999 1 320px" placeholder="Paste it here">
+          <button class="btn btn-primary" id="submitBtn" type="submit" style="flex:1 1 200px">Submit payment</button>
+        </div>
+        <p class="err" id="err" style="margin-top:12px" hidden></p>
+      </form>
+    </section>
+  </div>
+
+  <aside class="sticky" style="display:flex;flex-direction:column;gap:18px">
+    <div class="summary">
+      <div class="lbl-up">Advance due now</div>
+      <div style="font-size:44px;font-weight:800;letter-spacing:-.035em;color:var(--accent);margin:8px 0 2px">${money(o.advance)}</div>
+      <div class="dim" style="font-size:14px">${o.advancePercent}% of ${money(o.total)} total</div>
+      <div class="sum-lines" style="min-height:0">
+        <div class="sum-line"><span>Order</span><b>${esc(o.code)}</b></div>
+        <div class="sum-line"><span>Build</span><b>${esc(o.base?.name || "")}</b></div>
+        <div class="sum-line"><span>Features</span><b>${(o.features || []).length} selected</b></div>
+        <div class="sum-line"><span>Balance later</span><b>${money(Math.round((o.total - o.advance) * 100) / 100)}</b></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;padding-top:18px;color:var(--green-text)">${ICONS.shield}<p class="dim" style="font-size:13.5px">Every payment is checked by hand before your build starts.</p></div>
+    </div>
+    <div class="card flat" style="padding:24px">
+      <h3 style="margin:0 0 16px;font-size:16px">What happens next</h3>
+      <ol class="track-list" style="font-size:14px">
+        <li class="now"><span class="rail"><span class="dot"></span><span class="line"></span></span><span class="body" style="padding-bottom:16px"><span class="ttl" style="font-size:15px">We verify your payment</span></span></li>
+        <li><span class="rail"><span class="dot"></span><span class="line"></span></span><span class="body" style="padding-bottom:16px"><span class="ttl" style="font-size:15px">Your tracking page turns green</span></span></li>
+        <li><span class="rail"><span class="dot"></span></span><span class="body" style="padding-bottom:0"><span class="ttl" style="font-size:15px">Design starts the same day</span></span></li>
+      </ol>
+    </div>
+  </aside>
+</div>`;
+
+// ---- timer (rate lock display) ----
+let left = 30 * 60;
+const tEl = document.querySelector("#timer span");
+setInterval(() => { left = Math.max(0, left - 1); tEl.textContent = `${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`; if (!left) { tEl.textContent = "Refresh rate"; } }, 1000);
+
+// ---- methods ----
+const mEl = document.getElementById("methods");
+mEl.innerHTML = methods.map((m, i) => `
+  <label class="method">
+    <input type="radio" name="m" value="${esc(m.id)}" ${i === 0 ? "checked" : ""}>
+    <span class="coin" style="background:${esc(m.color || "#2E6BD1")}">${esc(m.symbolChar || (m.symbol || m.name || "?").slice(0, 1))}</span>
+    <span class="m-body"><span class="m-name">${esc(m.name)}</span><span class="m-net">${esc(m.network || (m.type === "link" ? "Online transfer" : ""))}</span></span>
+    ${m.badge ? `<span class="badge">${esc(m.badge)}</span>` : ""}
+  </label>`).join("");
+
+const rates = {};
+async function cryptoAmount(m) {
+  const stable = /^(USDT|USDC|DAI|BUSD|FDUSD)$/i.test(m.symbol || "");
+  if (stable || !m.coingeckoId) return { text: `${o.advance.toFixed(2)} ${m.symbol || "USD"}`, approx: !stable };
+  try {
+    if (!rates[m.coingeckoId]) {
+      const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(m.coingeckoId)}&vs_currencies=usd`);
+      rates[m.coingeckoId] = (await r.json())[m.coingeckoId].usd;
+    }
+    const amt = o.advance / rates[m.coingeckoId];
+    return { text: `${amt.toFixed(m.decimals ?? 6)} ${m.symbol}`, approx: true, rate: rates[m.coingeckoId] };
+  } catch { return { text: `${money(o.advance)} in ${m.symbol}`, approx: true }; }
+}
+
+let current;
+async function show() {
+  const idSel = mEl.querySelector("input:checked")?.value;
+  const m = methods.find((x) => x.id === idSel) || methods[0];
+  current = m;
+  const d = document.getElementById("detail");
+  const isLink = m.type === "link";
+  document.getElementById("txLbl").textContent = isLink ? "Transaction ID / reference" : "Transaction hash (TxID)";
+  document.getElementById("refHelp").textContent = isLink
+    ? `After paying with ${m.name}, copy the transaction ID or reference from your receipt and paste it below.`
+    : "Copy the transaction hash (TxID) from your wallet after sending and paste it below. We check it on the blockchain, usually within an hour.";
+
+  if (isLink) {
+    const url = String(m.url || "").replace("{amount}", o.advance.toFixed(2)).replace("{code}", encodeURIComponent(o.code));
+    d.innerHTML = `
+      <div class="pay-head"><span class="num-badge">1</span><h2 style="font-size:20px">Pay with ${esc(m.name)}</h2></div>
+      <div class="field"><span class="lbl-up">Amount</span>
+        <div class="copy-row big"><input readonly value="${money(o.advance)} USD" aria-label="Amount"><button class="copy-btn ghost" type="button" data-copy="${o.advance.toFixed(2)}">Copy</button></div></div>
+      ${m.address ? `<div class="field" style="margin-top:18px"><span class="lbl-up">${esc(m.addressLabel || "Send to")}</span>
+        <div class="copy-row"><input readonly value="${esc(m.address)}" aria-label="Recipient"><button class="copy-btn" type="button" data-copy="${esc(m.address)}">Copy</button></div></div>` : ""}
+      <div class="field" style="margin-top:18px"><span class="lbl-up">Payment note / reference</span>
+        <div class="copy-row"><input readonly value="${esc(o.code)}" aria-label="Reference"><button class="copy-btn ghost" type="button" data-copy="${esc(o.code)}">Copy</button></div></div>
+      ${url ? `<a class="btn btn-primary btn-block" style="margin-top:22px" href="${esc(url)}" target="_blank" rel="noopener">Open ${esc(m.name)} &rarr;</a>` : ""}
+      ${m.note ? `<div class="notice info" style="margin-top:18px">${ICONS.warn}<div>${esc(m.note)}</div></div>` : ""}`;
+  } else {
+    d.innerHTML = `
+      <div class="pay-head"><span class="num-badge">1</span><h2 style="font-size:20px">Send exactly this amount</h2>
+        <span class="chip" style="margin-left:auto"><i style="background:${esc(m.color || "#2E6BD1")};border-radius:99px"></i>${esc(m.symbol || m.name)} · ${esc(m.network || "")}</span></div>
+      <div class="pay-grid">
+        <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+          <div class="field"><span class="lbl-up">Amount</span>
+            <div class="copy-row big"><input readonly id="amt" value="…" aria-label="Amount"><button class="copy-btn ghost" type="button" id="amtCopy">Copy</button></div>
+            <span class="hint" id="amtHint"></span></div>
+          <div class="field"><span class="lbl-up">Our ${esc(m.symbol || "")} address</span>
+            <div class="copy-row"><input readonly value="${esc(m.address || "")}" aria-label="Wallet address"><button class="copy-btn" type="button" data-copy="${esc(m.address || "")}">Copy</button></div></div>
+          ${m.memo ? `<div class="field"><span class="lbl-up">Memo / tag (required)</span><div class="copy-row"><input readonly value="${esc(m.memo)}" aria-label="Memo"><button class="copy-btn" type="button" data-copy="${esc(m.memo)}">Copy</button></div></div>` : ""}
+          <div class="notice warn">${ICONS.warn}<div>Send <b style="color:#fff">${esc(m.symbol || "")} on the ${esc(m.network || "")} network only</b>. Coins sent on another network or to another address cannot be recovered.${m.note ? "<br>" + esc(m.note) : ""}</div></div>
+        </div>
+        <div style="text-align:center">
+          <div class="qr-box" id="qr" aria-label="QR code of the wallet address" role="img"></div>
+          <p class="hint" style="margin-top:12px;max-width:220px">Scan with your wallet app to fill in the address</p>
+        </div>
+      </div>`;
+    const a = await cryptoAmount(m);
+    document.getElementById("amt").value = a.text;
+    document.getElementById("amtCopy").onclick = (e) => copyText(a.text.split(" ")[0], e.currentTarget);
+    document.getElementById("amtHint").textContent = a.rate ? `Approximate at 1 ${m.symbol} = $${a.rate.toLocaleString()} · equals ${money(o.advance)}` : (a.approx ? `Send the ${m.symbol} equivalent of ${money(o.advance)}` : `Equals ${money(o.advance)} · network fee paid by you`);
+    const qrEl = document.getElementById("qr");
+    const draw = () => { qrEl.innerHTML = ""; new window.QRCode(qrEl, { text: m.address || " ", width: 190, height: 190, colorDark: "#050B1A", colorLight: "#ffffff", correctLevel: window.QRCode.CorrectLevel.M }); };
+    if (window.QRCode) draw(); else addEventListener("load", draw, { once: true });
+  }
+  d.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", () => copyText(b.dataset.copy, b)));
+}
+mEl.addEventListener("change", show);
+show();
+
+// ---- submit reference ----
+document.getElementById("txForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = document.getElementById("err"), btn = document.getElementById("submitBtn");
+  err.hidden = true;
+  const tx = document.getElementById("txid").value.trim();
+  if (tx.length < 6) { err.textContent = "Please paste the full transaction hash or reference."; err.hidden = false; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Submitting';
+  try {
+    await ensureAnon();
+    await updateDoc(doc(db, "orders", o.id), {
+      txid: tx,
+      method: { id: current.id, name: current.name, network: current.network || "", symbol: current.symbol || "", type: current.type || "crypto", explorer: current.explorer || "" },
+      payAmount: document.getElementById("amt")?.value || money(o.advance),
+      status: "submitted",
+      submittedAt: serverTimestamp()
+    });
+    toast("Payment submitted — we are checking it now");
+    location.href = "track.html?id=" + encodeURIComponent(o.id) + "&new=1";
+  } catch (x) {
+    console.error(x);
+    err.textContent = "Could not submit. Please try again or contact us with your order code " + o.code + ".";
+    err.hidden = false; btn.disabled = false; btn.textContent = "Submit payment";
+  }
+});
+refresh();
+}
+main();
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pricing — App Solution Limited</title>
+<meta name="description" content="Clear, fixed prices for custom Android apps. Half up front, half on delivery.">
+<meta name="theme-color" content="#050B1A">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<meta property="og:image" content="assets/img/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="bg-soft">
+<main>
+<section class="wrap page-head" style="text-align:center">
+  <span class="eyebrow reveal">Pricing</span>
+  <h1 class="h1 reveal reveal-d1" style="margin-top:22px">Clear prices, no surprises</h1>
+  <p class="lead reveal reveal-d2" style="margin:18px auto 0" id="lead">Pick a package, or build your own in the order form and watch the total update live.</p>
+</section>
+
+<section class="wrap" style="padding-bottom:72px">
+  <div class="grid-3" id="plans" style="align-items:start;perspective:1500px"></div>
+</section>
+
+<section class="wrap" style="padding-bottom:80px">
+  <div class="layout-side">
+    <div class="card flat reveal">
+      <h2 style="font-size:22px;margin-bottom:22px">Add any of these to any package</h2>
+      <div class="grid-2" id="addons" style="gap:12px"></div>
+    </div>
+    <div class="card hl reveal reveal-d1" style="display:flex;flex-direction:column">
+      <h2 style="font-size:20px;margin-bottom:14px">How payment works</h2>
+      <p class="muted" id="payText" style="font-size:15px;line-height:1.7"></p>
+      <div class="pill-row" style="margin:20px 0 24px"><span class="pill">USDT</span><span class="pill">Bitcoin</span><span class="pill">Ethereum</span><span class="pill">PayPal</span><span class="pill">Wise</span></div>
+      <a class="btn btn-primary" style="margin-top:auto" href="order.html">Build a custom quote</a>
+    </div>
+  </div>
+</section>
+</main>
+<script type="module" src="assets/js/main.js"></script>
+<script type="module">
+import { list, getSettings, money, esc, lines } from "./assets/js/firebase.js";
+import { refresh } from "./assets/js/main.js";
+const s = await getSettings();
+const adv = Number(s.advancePercent) || 50;
+document.getElementById("payText").textContent = `${adv}% advance to start, ${100 - adv}% when you approve the finished app. Pay in USDT, Bitcoin, Ethereum, PayPal or Wise — your choice at checkout.`;
+document.getElementById("lead").textContent = `Pick a package, or build your own in the order form and watch the total update live. ${adv}% up front, the rest on delivery.`;
+
+const plans = await list("packages");
+document.getElementById("plans").innerHTML = plans.map((p, i) => `
+  <article class="card plan ${p.featured ? "featured" : ""} reveal reveal-d${i % 3}" ${p.featured ? "" : "data-tilt"}>
+    <div style="display:flex;align-items:center;gap:12px"><h2 style="font-size:20px">${esc(p.name)}</h2>${p.featured ? '<span class="badge">MOST CHOSEN</span>' : ""}</div>
+    <p class="muted" style="font-size:14.5px">${esc(p.desc)}</p>
+    <div class="amt"><b>${money(p.price)}</b><span>${esc(p.unit || "one-off")}</span></div>
+    <ul class="checks">${lines(p.items).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+    <a class="btn ${p.featured ? "btn-primary" : "btn-ghost"}" href="order.html?package=${encodeURIComponent(p.id)}">Choose ${esc(p.name)}</a>
+  </article>`).join("");
+
+const feats = await list("features");
+document.getElementById("addons").innerHTML = feats.map((f) => `<div class="addon"><span>${esc(f.name)}</span><b>+${money(f.price)}</b></div>`).join("");
+refresh();
+</script>
+</body>
+</html>

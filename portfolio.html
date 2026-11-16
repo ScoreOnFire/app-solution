@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portfolio — App Solution Limited</title>
+<meta name="description" content="Android apps we have designed, built and published on Google Play.">
+<meta name="theme-color" content="#050B1A">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<meta property="og:image" content="assets/img/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="bg-soft">
+<main>
+<section class="wrap page-head">
+  <span class="eyebrow reveal">Portfolio</span>
+  <h1 class="h1 reveal reveal-d1" style="margin-top:22px">Apps we have shipped</h1>
+  <p class="lead reveal reveal-d2">Every one of these is live on Google Play. Open any card to read how it was built.</p>
+</section>
+
+<section class="wrap" style="padding-bottom:80px">
+  <div class="filters" id="filters" role="group" aria-label="Filter by category"></div>
+  <div class="grid-3" id="grid">
+    <div class="skeleton" style="height:340px"></div><div class="skeleton" style="height:340px"></div><div class="skeleton" style="height:340px"></div>
+  </div>
+</section>
+</main>
+<script type="module" src="assets/js/main.js"></script>
+<script type="module">
+import { list, esc } from "./assets/js/firebase.js";
+import { refresh } from "./assets/js/main.js";
+import { workCard } from "./assets/js/cards.js";
+
+const items = await list("portfolio");
+const cats = ["All work", ...new Set(items.map((x) => x.category).filter(Boolean))];
+const fEl = document.getElementById("filters");
+const gEl = document.getElementById("grid");
+let active = "All work";
+
+function render() {
+  fEl.innerHTML = cats.map((c) => `<button type="button" class="filter ${c === active ? "on" : ""}" aria-pressed="${c === active}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
+  const shown = active === "All work" ? items : items.filter((x) => x.category === active);
+  gEl.innerHTML = shown.map((w, i) => workCard(w, i)).join("") + `
+    <a class="card work add reveal" data-tilt href="order.html">
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></div>
+      <h3 style="margin:0">Your app next</h3>
+      <p style="color:var(--soft)">Pick your features and get a price in under two minutes.</p>
+      <span style="font-weight:700;color:var(--accent)">Start an order &rarr;</span>
+    </a>`;
+  refresh(gEl);
+}
+fEl.addEventListener("click", (e) => {
+  const b = e.target.closest(".filter"); if (!b) return;
+  active = b.dataset.c; render();
+});
+render();
+</script>
+</body>
+</html>

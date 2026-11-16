@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Track your order — App Solution Limited</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#050B1A">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="bg-soft">
+<main class="wrap" style="padding-bottom:80px" id="root">
+  <div class="page-head"><div class="skeleton" style="height:56px;max-width:520px"></div><div class="skeleton" style="height:300px;margin-top:30px"></div></div>
+</main>
+<script type="module" src="assets/js/main.js"></script>
+<script type="module">
+import { db, doc, getDoc, getDocs, collection, query, where, money, esc, qs, ensureAnon, currentUser, copyText, STATUS, fmtDate } from "./assets/js/firebase.js";
+import { ICONS, refresh } from "./assets/js/main.js";
+
+const root = document.getElementById("root");
+
+const STAGES = [
+  ["Order placed", "We received your brief"],
+  ["Advance payment", "Paid and verified"],
+  ["Design", "Screens and branding for your approval"],
+  ["Development", "Coding and database setup"],
+  ["Testing & approval", "You try a test version on your phone"],
+  ["Delivered", "Live on Google Play"]
+];
+const CUR = { pending: 1, rejected: 1, submitted: 1, verified: 2, design: 2, development: 3, testing: 4, delivered: 6, cancelled: -1 };
+
+async function lookupView(msg) {
+  const u = await currentUser();
+  let mine = [];
+  if (u) {
+    try {
+      const snap = await getDocs(query(collection(db, "orders"), where("uid", "==", u.uid)));
+      mine = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      mine.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    } catch (e) { console.warn(e); }
+  }
+  root.innerHTML = `
+  <section class="page-head" style="max-width:760px">
+    <span class="eyebrow">Track order</span>
+    <h1 class="h1" style="margin-top:22px">Where is my app?</h1>
+    <p class="lead">Open the private tracking link you got after ordering, or paste it below.</p>
+    ${msg ? `<div class="notice bad" style="margin-top:22px">${ICONS.warn}<div>${esc(msg)}</div></div>` : ""}
+    <form id="look" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:28px">
+      <label class="sr-only" for="link">Tracking link</label>
+      <input class="input" id="link" placeholder="Paste your tracking link" style="flex:999 1 340px">
+      <button class="btn btn-primary" type="submit" style="flex:1 1 160px">Track</button>
+    </form>
+  </section>
+  ${mine.length ? `<section style="max-width:760px"><div class="lbl-up" style="margin-bottom:14px">Orders from this device</div>
+    <div style="display:flex;flex-direction:column;gap:12px">${mine.map((o) => `
+      <a class="reach" href="track.html?id=${encodeURIComponent(o.id)}">
+        <span style="min-width:0;flex:1 1 auto"><small>${esc(fmtDate(o.createdAt))}</small><strong>${esc(o.code)} · ${esc(o.base?.name || "")}</strong></span>
+        <span class="status-pill st-${esc(o.status)}">${esc(STATUS[o.status]?.label || o.status)}</span>
+      </a>`).join("")}</div></section>` : ""}`;
+  document.getElementById("look").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = document.getElementById("link").value.trim();
+    const m = v.match(/[?&]id=([^&#]+)/);
+    const id = m ? decodeURIComponent(m[1]) : v;
+    if (id) location.href = "track.html?id=" + encodeURIComponent(id);
+  });
+}
+
+async function orderView(id) {
+  await ensureAnon().catch(() => {});
+  let snap;
+  try { snap = await getDoc(doc(db, "orders", id)); } catch (e) { console.error(e); }
+  if (!snap || !snap.exists()) return lookupView("We could not find that order. Check the link and try again.");
+  const o = { id: snap.id, ...snap.data() };
+  const cur = CUR[o.status] ?? 1;
+  const paidPct = ["verified", "design", "development", "testing"].includes(o.status) ? (o.advancePercent || 50) : o.status === "delivered" ? 100 : 0;
+  const link = location.origin + location.pathname + "?id=" + encodeURIComponent(o.id);
+
+  let banner = "";
+  if (qs("new") || o.status === "submitted") banner = `<div class="notice info" style="margin-top:22px">${ICONS.clock}<div><b style="color:#fff;display:block">Payment submitted</b>We are checking your transaction now — usually within an hour. This page updates when it is verified.</div></div>`;
+  else if (o.status === "pending") banner = `<div class="notice warn" style="margin-top:22px">${ICONS.warn}<div><b style="color:#fff;display:block">Waiting for your advance payment</b>Your build starts as soon as we receive it. <a href="pay.html?id=${encodeURIComponent(o.id)}">Pay now &rarr;</a></div></div>`;
+  else if (o.status === "rejected") banner = `<div class="notice bad" style="margin-top:22px">${ICONS.warn}<div><b style="color:#fff;display:block">We could not find your payment</b>${esc(o.adminNote || "Please check the transaction and submit it again.")} <a href="pay.html?id=${encodeURIComponent(o.id)}">Try again &rarr;</a></div></div>`;
+  else if (o.status === "cancelled") banner = `<div class="notice bad" style="margin-top:22px">${ICONS.warn}<div><b style="color:#fff;display:block">This order was cancelled</b>${esc(o.adminNote || "Contact us if you have questions.")}</div></div>`;
+  else if (o.status !== "pending") banner = `<div class="notice ok" style="margin-top:22px"><span style="color:var(--green-text)">${ICONS.check}</span><div><b style="color:#fff;display:block">${o.status === "delivered" ? "Your app is delivered" : "Payment verified — your build is under way"}</b>${o.publicNote ? esc(o.publicNote) : "We will update this page at every stage."}</div></div>`;
+
+  root.innerHTML = `
+  <section class="page-head" style="padding-bottom:30px">
+    <a class="back" href="track.html">&larr; All my orders</a>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px">
+      <h1 class="h2">Order ${esc(o.code)}</h1>
+      <span class="status-pill st-${esc(o.status)}">${esc(STATUS[o.status]?.label || o.status)}</span>
+    </div>
+    <p class="lead" style="margin-top:12px">${esc(o.base?.name || "")}${o.features?.length ? ` · ${o.features.length} feature${o.features.length > 1 ? "s" : ""}` : ""}${o.createdAt ? " · ordered " + esc(fmtDate(o.createdAt)) : ""}</p>
+    ${banner}
+  </section>
+
+  <div class="layout-side">
+    <div>
+      <ol class="track-list">${STAGES.map(([t, d], i) => {
+        const cls = cur === -1 ? "" : (i < cur || cur === 6) ? "done" : i === cur ? "now" : "";
+        const extra = i === 2 && o.previewUrl && cur >= 2 ? `<a class="btn btn-ghost btn-sm" style="margin-top:12px" href="${esc(o.previewUrl)}" target="_blank" rel="noopener">Open design preview</a>`
+          : i === 4 && o.apkUrl && cur >= 4 ? `<a class="btn btn-primary btn-sm" style="margin-top:12px" href="${esc(o.apkUrl)}" target="_blank" rel="noopener">Download test APK</a>`
+          : i === 5 && o.playUrl && cur === 6 ? `<a class="btn btn-primary btn-sm" style="margin-top:12px" href="${esc(o.playUrl)}" target="_blank" rel="noopener">Open on Google Play</a>` : "";
+        return `<li class="${cls} reveal reveal-d${i % 4}">
+          <span class="rail"><span class="dot">${cls === "done" ? `<span style="color:#06240F">${ICONS.check}</span>` : ""}</span>${i < STAGES.length - 1 ? '<span class="line"></span>' : ""}</span>
+          <span class="body"><span class="ttl" style="display:block">${t}</span><span class="txt" style="display:block">${d}</span>${extra}</span>
+        </li>`;
+      }).join("")}</ol>
+    </div>
+
+    <aside class="sticky" style="display:flex;flex-direction:column;gap:18px">
+      <div class="summary">
+        <h2>Payment summary</h2>
+        <div class="sum-lines" style="min-height:0">
+          <div class="sum-line"><span>Total</span><b>${money(o.total)}</b></div>
+          <div class="sum-line"><span>Advance (${o.advancePercent}%)</span><b style="color:${paidPct ? "var(--green-text)" : "inherit"}">${money(o.advance)}</b></div>
+          <div class="sum-line"><span>Balance</span><b>${money(Math.round((o.total - o.advance) * 100) / 100)}</b></div>
+          ${o.method?.name ? `<div class="sum-line"><span>Paid with</span><b>${esc(o.method.name)}</b></div>` : ""}
+        </div>
+        <div class="progress" style="margin-top:20px"><i style="width:${paidPct}%"></i></div>
+        <p class="hint" style="margin-top:10px">${paidPct}% paid${paidPct && paidPct < 100 ? " · balance due on delivery" : ""}</p>
+        ${o.status === "pending" || o.status === "rejected" ? `<a class="btn btn-primary btn-block" style="margin-top:18px" href="pay.html?id=${encodeURIComponent(o.id)}">Pay advance</a>` : ""}
+      </div>
+      <div class="card flat" style="padding:24px">
+        <h3 style="margin:0 0 10px;font-size:16px">Your private tracking link</h3>
+        <p class="hint" style="margin-bottom:14px">Save it — it opens this page on any device. Do not share it publicly.</p>
+        <div class="copy-row"><input readonly value="${esc(link)}" aria-label="Tracking link" style="font-size:12.5px"><button class="copy-btn" type="button" id="cp">Copy</button></div>
+      </div>
+      <a class="btn btn-ghost" href="contact.html">Message support</a>
+    </aside>
+  </div>`;
+  document.getElementById("cp").addEventListener("click", (e) => copyText(link, e.currentTarget));
+  refresh(root);
+}
+
+const id = qs("id");
+if (id) orderView(id); else lookupView();
+</script>
+</body>
+</html>

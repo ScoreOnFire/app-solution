@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Start an order — App Solution Limited</title>
+<meta name="description" content="Configure your Android app, see the price live and place your order.">
+<meta name="theme-color" content="#050B1A">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="bg-soft">
+<main class="wrap" style="padding-bottom:80px">
+
+<div class="steps-bar" id="bar">
+  <div class="s on"><div class="bar"><i></i></div><div class="t">1. App type</div><div class="v" id="v1">Choose one</div></div>
+  <div class="s"><div class="bar"><i></i></div><div class="t">2. Features</div><div class="v" id="v2">Optional extras</div></div>
+  <div class="s"><div class="bar"><i></i></div><div class="t">3. Your details</div><div class="v" id="v3">Contact &amp; brief</div></div>
+  <div class="s"><div class="bar"><i></i></div><div class="t">4. Confirm</div><div class="v" id="v4">Then pay advance</div></div>
+</div>
+
+<div class="layout-side">
+  <form id="wiz" novalidate>
+    <!-- step 1 -->
+    <section class="pane on" data-step="1">
+      <h1 class="h2">What are we building?</h1>
+      <p class="lead" style="margin:12px 0 30px">Start from a package or an app type. You can add extras on the next step.</p>
+      <div id="pkgWrap"><div class="lbl-up" style="margin-bottom:14px">Packages</div><div class="grid-2" id="pkgs" style="gap:14px;margin-bottom:28px"></div></div>
+      <div class="lbl-up" style="margin-bottom:14px">App types</div>
+      <div class="grid-2" id="svcs" style="gap:14px"></div>
+    </section>
+
+    <!-- step 2 -->
+    <section class="pane" data-step="2">
+      <h1 class="h2">Pick the features you need</h1>
+      <p class="lead" style="margin:12px 0 30px">The price on the right updates as you choose. Nothing is charged until you confirm.</p>
+      <div class="grid-2" id="feats" style="gap:14px"></div>
+    </section>
+
+    <!-- step 3 -->
+    <section class="pane" data-step="3">
+      <h1 class="h2">Tell us about you and the app</h1>
+      <p class="lead" style="margin:12px 0 30px">We use this to contact you and to plan the design.</p>
+      <div class="form-grid">
+        <div class="field"><label for="name">Your name *</label><input class="input" id="name" maxlength="100" autocomplete="name" required></div>
+        <div class="field"><label for="email">Email *</label><input class="input" id="email" type="email" maxlength="200" autocomplete="email" required></div>
+        <div class="field"><label for="wa">WhatsApp / Telegram</label><input class="input" id="wa" maxlength="60" placeholder="+1 555 000 000"></div>
+        <div class="field"><label for="country">Country</label><input class="input" id="country" maxlength="60" autocomplete="country-name"></div>
+        <div class="field"><label for="appName">App name (if you have one)</label><input class="input" id="appName" maxlength="80"></div>
+        <div class="field"><label for="deadline">When do you need it?</label>
+          <select class="select" id="deadline"><option>As soon as possible</option><option>Within 2 weeks</option><option>Within a month</option><option>No fixed date</option></select></div>
+        <div class="field full"><label for="details">Describe your app *</label><textarea class="textarea" id="details" maxlength="4000" required placeholder="Who is it for? What should users be able to do? Any apps you like the look of?"></textarea></div>
+        <div class="field full"><label for="links">Logo, brand files or reference links</label><textarea class="textarea" id="links" maxlength="1500" style="min-height:90px" placeholder="Google Drive / Dropbox links, websites or Play Store apps you like"></textarea><span class="hint">We cannot accept file uploads here — please share a link instead.</span></div>
+      </div>
+    </section>
+
+    <!-- step 4 -->
+    <section class="pane" data-step="4">
+      <h1 class="h2">Check and confirm</h1>
+      <p class="lead" style="margin:12px 0 26px">Make sure everything is right. After this you will choose how to pay the advance.</p>
+      <div class="card flat" id="review" style="padding:26px"></div>
+      <label class="opt" style="margin-top:20px">
+        <input type="checkbox" id="agree">
+        <span class="o-body"><span class="o-title" style="font-size:15px;font-weight:600">I agree to the <a href="terms.html" target="_blank">terms of service</a> and <a href="privacy.html" target="_blank">privacy policy</a></span></span>
+      </label>
+    </section>
+
+    <p class="err" id="err" style="margin-top:18px" hidden></p>
+    <div class="wiz-nav">
+      <button class="btn btn-ghost" type="button" id="back" hidden>&larr; Back</button>
+      <button class="btn btn-primary" type="button" id="next">Continue &rarr;</button>
+    </div>
+  </form>
+
+  <aside class="sticky">
+    <div class="summary">
+      <h2>Your build</h2>
+      <div class="sum-lines" id="lines"><span class="dim" style="font-size:14px">Choose an app type to begin.</span></div>
+      <div class="sum-total"><span>Total</span><b id="total">$0</b></div>
+      <div class="adv-box">
+        <div class="row"><span id="advLbl">Advance due (50%)</span><b id="adv">$0</b></div>
+        <p id="advNote">Balance payable when you approve the finished app.</p>
+      </div>
+      <p class="hint" style="margin-top:18px;text-align:center">Crypto, PayPal and Wise accepted. No account needed.</p>
+    </div>
+  </aside>
+</div>
+</main>
+<script type="module" src="assets/js/main.js"></script>
+<script type="module">
+import { list, getSettings, money, esc, qs, ensureAnon, db, collection, addDoc, serverTimestamp, makeOrderCode, toast } from "./assets/js/firebase.js";
+import { ICONS } from "./assets/js/main.js";
+
+const [svcs, pkgs, feats, s] = await Promise.all([list("services"), list("packages"), list("features"), getSettings()]);
+const advPct = Math.min(100, Math.max(0, Number(s.advancePercent) || 50));
+document.getElementById("advLbl").textContent = `Advance due now (${advPct}%)`;
+document.getElementById("advNote").textContent = advPct < 100 ? "Balance payable when you approve the finished app." : "Full payment up front.";
+
+const optHtml = (kind, x) => `
+  <label class="opt">
+    <input type="radio" name="base" value="${kind}:${esc(x.id)}">
+    <span class="o-body"><span class="o-title">${esc(x.name)}</span><span class="o-desc">${esc(x.desc || "")}</span></span>
+    <span class="o-price">${kind === "service" ? "from " : ""}${money(x.price)}</span>
+  </label>`;
+document.getElementById("pkgs").innerHTML = pkgs.map((p) => optHtml("package", p)).join("");
+if (!pkgs.length) document.getElementById("pkgWrap").hidden = true;
+document.getElementById("svcs").innerHTML = svcs.map((x) => optHtml("service", x)).join("");
+document.getElementById("feats").innerHTML = feats.map((f) => `
+  <label class="opt">
+    <input type="checkbox" name="feat" value="${esc(f.id)}">
+    <span class="o-body"><span class="o-title">${esc(f.name)}</span><span class="o-desc">${esc(f.desc || "")}</span></span>
+    <span class="o-price">+${money(f.price)}</span>
+  </label>`).join("");
+
+// pre-select from ?service= or ?package=
+const pre = qs("package") ? "package:" + qs("package") : qs("service") ? "service:" + qs("service") : null;
+if (pre) { const r = document.querySelector(`input[name=base][value="${CSS.escape(pre)}"]`); if (r) r.checked = true; }
+
+const form = document.getElementById("wiz");
+let step = 1;
+
+function state() {
+  const b = form.querySelector("input[name=base]:checked");
+  let base = null;
+  if (b) {
+    const [kind, id] = b.value.split(":");
+    const src = kind === "package" ? pkgs : svcs;
+    const x = src.find((y) => y.id === id);
+    if (x) base = { kind, id: x.id, name: x.name, price: Number(x.price) || 0 };
+  }
+  const chosen = [...form.querySelectorAll("input[name=feat]:checked")].map((c) => feats.find((f) => f.id === c.value)).filter(Boolean)
+    .map((f) => ({ id: f.id, name: f.name, price: Number(f.price) || 0 }));
+  const total = Math.round(((base?.price || 0) + chosen.reduce((a, f) => a + f.price, 0)) * 100) / 100;
+  const advance = Math.round(total * advPct) / 100;
+  return { base, chosen, total, advance };
+}
+
+function paint() {
+  const { base, chosen, total, advance } = state();
+  const L = document.getElementById("lines");
+  L.innerHTML = base
+    ? `<div class="sum-line"><span>${esc(base.name)}</span><b>${money(base.price)}</b></div>` + chosen.map((f) => `<div class="sum-line"><span>${esc(f.name)}</span><b>${money(f.price)}</b></div>`).join("")
+    : `<span class="dim" style="font-size:14px">Choose an app type to begin.</span>`;
+  document.getElementById("total").textContent = money(total);
+  document.getElementById("adv").textContent = money(advance);
+  document.getElementById("v1").textContent = base ? base.name : "Choose one";
+  document.getElementById("v2").textContent = chosen.length ? `${chosen.length} selected` : "Optional extras";
+}
+form.addEventListener("change", paint);
+paint();
+
+function go(n) {
+  step = n;
+  form.querySelectorAll(".pane").forEach((p) => p.classList.toggle("on", Number(p.dataset.step) === n));
+  document.querySelectorAll("#bar .s").forEach((s, i) => { s.classList.toggle("on", i + 1 === n); s.classList.toggle("done", i + 1 < n); });
+  document.getElementById("back").hidden = n === 1;
+  document.getElementById("next").textContent = n === 4 ? "Place order & pay advance" : "Continue →";
+  document.getElementById("err").hidden = true;
+  if (n === 4) review();
+  scrollTo({ top: 0, behavior: "smooth" });
+}
+function fail(msg) { const e = document.getElementById("err"); e.textContent = msg; e.hidden = false; }
+const val = (id) => document.getElementById(id).value.trim();
+
+function review() {
+  const { base, chosen, total, advance } = state();
+  document.getElementById("review").innerHTML = `
+    <div class="grid-2" style="gap:20px">
+      <div><div class="lbl-up">Build</div><p style="margin-top:6px;font-weight:600">${esc(base?.name || "")}</p></div>
+      <div><div class="lbl-up">Features</div><p style="margin-top:6px">${chosen.length ? chosen.map((f) => esc(f.name)).join(", ") : '<span class="dim">None</span>'}</p></div>
+      <div><div class="lbl-up">Name</div><p style="margin-top:6px">${esc(val("name"))}</p></div>
+      <div><div class="lbl-up">Email</div><p style="margin-top:6px">${esc(val("email"))}</p></div>
+      <div class="full" style="grid-column:1/-1"><div class="lbl-up">Brief</div><p class="muted" style="margin-top:6px;white-space:pre-wrap">${esc(val("details"))}</p></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:24px;margin-top:22px;padding-top:20px;border-top:1px solid var(--line)">
+      <div><div class="lbl-up">Total</div><b style="font-size:24px">${money(total)}</b></div>
+      <div><div class="lbl-up">Advance now</div><b style="font-size:24px;color:var(--accent)">${money(advance)}</b></div>
+    </div>`;
+}
+
+document.getElementById("back").addEventListener("click", () => go(step - 1));
+document.getElementById("next").addEventListener("click", async () => {
+  const st = state();
+  if (step === 1) { if (!st.base) return fail("Please choose a package or an app type."); return go(2); }
+  if (step === 2) return go(3);
+  if (step === 3) {
+    if (!val("name")) return fail("Please enter your name.");
+    if (!/^\S+@\S+\.\S+$/.test(val("email"))) return fail("Please enter a valid email address.");
+    if (val("details").length < 10) return fail("Please describe your app in a sentence or two.");
+    return go(4);
+  }
+  if (step === 4) {
+    if (!document.getElementById("agree").checked) return fail("Please accept the terms to continue.");
+    const btn = document.getElementById("next");
+    btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Placing order';
+    try {
+      const u = await ensureAnon();
+      const code = makeOrderCode();
+      const ref = await addDoc(collection(db, "orders"), {
+        uid: u.uid, code,
+        base: st.base, features: st.chosen,
+        total: st.total, advancePercent: advPct, advance: st.advance,
+        name: val("name"), email: val("email"), whatsapp: val("wa"), country: val("country"),
+        appName: val("appName"), details: val("details"), links: val("links"), deadline: val("deadline"),
+        status: "pending", createdAt: serverTimestamp()
+      });
+      try { const mine = JSON.parse(localStorage.getItem("asl_orders") || "[]"); mine.unshift(ref.id); localStorage.setItem("asl_orders", JSON.stringify([...new Set(mine)].slice(0, 20))); } catch {}
+      toast("Order " + code + " created");
+      location.href = "pay.html?id=" + encodeURIComponent(ref.id);
+    } catch (x) {
+      console.error(x);
+      fail("We could not place the order. Please check your connection and try again. (" + (x.code || "error") + ")");
+      btn.disabled = false; btn.textContent = "Place order & pay advance";
+    }
+  }
+});
+if (pre && document.querySelector("input[name=base]:checked")) go(2);
+</script>
+</body>
+</html>

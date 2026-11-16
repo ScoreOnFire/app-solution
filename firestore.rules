@@ -1,0 +1,95 @@
+rules_version = '2';
+
+// ==========================================================
+// App Solution Limited — Firestore security rules
+// Paste this whole file into: Firebase Console → Firestore Database → Rules → Publish
+// ==========================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function str(v, max) { return v is string && v.size() <= max; }
+
+    // ---------- Admin registry ----------
+    // Created by hand in the console. A signed-in user may only check their own entry.
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // ---------- Public website content ----------
+    // Everyone can read; only admins can change.
+    match /settings/{id}       { allow read: if true; allow write: if isAdmin(); }
+    match /services/{id}       { allow read: if true; allow write: if isAdmin(); }
+    match /features/{id}       { allow read: if true; allow write: if isAdmin(); }
+    match /packages/{id}       { allow read: if true; allow write: if isAdmin(); }
+    match /portfolio/{id}      { allow read: if true; allow write: if isAdmin(); }
+    match /testimonials/{id}   { allow read: if true; allow write: if isAdmin(); }
+    match /faqs/{id}           { allow read: if true; allow write: if isAdmin(); }
+    match /paymentMethods/{id} { allow read: if true; allow write: if isAdmin(); }
+
+    // ---------- Orders ----------
+    match /orders/{orderId} {
+      // One order opens with its private tracking link (a random 20-character ID).
+      allow get: if true;
+
+      // Lists: admins see everything; a visitor may only list their own orders.
+      allow list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+
+      // A visitor can create an order for themselves, always starting as "pending".
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid','code','base','features','total','advancePercent','advance','name','email','whatsapp','country','appName','details','links','deadline','status','createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && str(request.resource.data.code, 20)
+        && str(request.resource.data.name, 100) && request.resource.data.name.size() > 0
+        && str(request.resource.data.email, 200) && request.resource.data.email.matches('.+@.+[.].+')
+        && str(request.resource.data.whatsapp, 60)
+        && str(request.resource.data.country, 60)
+        && str(request.resource.data.appName, 80)
+        && str(request.resource.data.details, 4000)
+        && str(request.resource.data.links, 1500)
+        && str(request.resource.data.deadline, 40)
+        && request.resource.data.base is map
+        && request.resource.data.features is list && request.resource.data.features.size() <= 40
+        && request.resource.data.total is number && request.resource.data.total > 0 && request.resource.data.total < 100000
+        && request.resource.data.advancePercent is number
+        && request.resource.data.advance is number
+        && request.resource.data.advance >= 0
+        && request.resource.data.advance <= request.resource.data.total;
+
+      // Visitors may only attach a payment reference while the order is waiting for payment.
+      // Status, prices and everything else can only be changed by an admin.
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.status in ['pending', 'rejected']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['txid','method','payAmount','status','submittedAt'])
+        && request.resource.data.status == 'submitted'
+        && str(request.resource.data.txid, 200) && request.resource.data.txid.size() >= 6
+        && request.resource.data.method is map
+        && str(request.resource.data.payAmount, 60)
+        && request.resource.data.submittedAt == request.time
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Contact form ----------
+    match /messages/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid','name','email','message','type','read','createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.read == false
+        && request.resource.data.createdAt == request.time
+        && str(request.resource.data.name, 100) && request.resource.data.name.size() > 0
+        && str(request.resource.data.email, 200)
+        && str(request.resource.data.message, 3000)
+        && str(request.resource.data.type, 60);
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terms of service — App Solution Limited</title>
+<meta name="theme-color" content="#050B1A">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="bg-soft">
+<main>
+<section class="wrap page-head legal">
+  <span class="eyebrow">Legal</span>
+  <h1 class="h1" style="margin-top:22px">Terms of service</h1>
+  <p class="lead">Last updated: November 2026</p>
+
+  <h2>1. The service</h2>
+  <p>App Solution Limited designs, develops and publishes Android applications to order. The features, price and delivery estimate for your project are those shown on your order summary, plus anything we agree with you in writing afterwards.</p>
+
+  <h2>2. Payment</h2>
+  <ul>
+    <li>An advance of <span class="adv">50</span>% of the total is due before work starts. The balance is due after you have tested the finished app and approved it, before it is published.</li>
+    <li>Crypto payments must be sent on the network shown at checkout. Funds sent on a different network or to a different address cannot be recovered by us.</li>
+    <li>Prices are in US dollars. For crypto, you pay the equivalent value at the time of sending; network fees are paid by you.</li>
+    <li>Work starts only after we have confirmed your payment.</li>
+  </ul>
+
+  <h2>3. Changes and revisions</h2>
+  <p>Design includes two rounds of revisions. Changes requested after a design is approved, or features not in the original order, are quoted separately.</p>
+
+  <h2>4. Refunds</h2>
+  <p>If we cannot start your project, the advance is refunded in full. Once design work has started, the advance is not refundable, but you keep all approved designs. If we fail to deliver what was agreed, we will refund the part of the payment that covers undelivered work.</p>
+
+  <h2>5. Publishing and ownership</h2>
+  <p>Unless agreed otherwise, apps are published under our verified Google Play developer account. You own your app's name, content and branding. Source code is handed over only if you ordered the source code add-on. If you later want the app moved to your own Play account, we will transfer it.</p>
+
+  <h2>6. Your content</h2>
+  <p>You confirm that you have the right to use any text, images, logos and data you give us, and that your app will comply with Google Play's developer policies. We may refuse projects that break those policies or the law.</p>
+
+  <h2>7. Support</h2>
+  <p>We fix bugs in delivered features free of charge for the support period included in your package. New features and ongoing maintenance are available separately.</p>
+
+  <h2>8. Liability</h2>
+  <p>Our total liability for any project is limited to the amount you paid for it. We are not responsible for losses caused by third-party services such as Google Play, Firebase or payment networks.</p>
+
+  <h2>9. Contact</h2>
+  <p>Questions about these terms: <a class="mail" href="#"></a>.</p>
+</section>
+</main>
+<script type="module" src="assets/js/main.js"></script>
+<script type="module">
+import { getSettings } from "./assets/js/firebase.js";
+const s = await getSettings();
+document.querySelectorAll(".mail").forEach((a) => { a.href = "mailto:" + s.email; a.textContent = s.email; });
+document.querySelectorAll(".adv").forEach((e) => e.textContent = s.advancePercent);
+</script>
+</body>
+</html>
